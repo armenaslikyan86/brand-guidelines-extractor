@@ -8,11 +8,19 @@ stakeholders. Outputs can be emitted as JSON (default) or Markdown.
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+import mimetypes
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 try:
     from openai import OpenAI
@@ -32,6 +40,40 @@ SUPPORTED_IMAGE_EXTENSIONS = {
     ".tif",
     ".tiff",
 }
+
+
+def _guess_mime_type(path: Path) -> str:
+    mime_type, _ = mimetypes.guess_type(str(path))
+    return mime_type or "image/png"
+
+
+def _encode_image_as_data_url(data: bytes, mime_type: str) -> str:
+    encoded = base64.b64encode(data).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
+
+
+def load_env_file(path: Path) -> None:
+    """Populate environment variables from a simple KEY=VALUE dotenv file."""
+
+    if not path.is_file():
+        return
+
+    try:
+        for raw_line in path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            if not key:
+                continue
+            value = value.strip().strip('"').strip("'")
+            os.environ.setdefault(key, value)
+    except OSError as exc:
+        print(f"Failed to read env file {path}: {exc}", file=sys.stderr)
+
 
 SYSTEM_PROMPT = (
     "You are a senior brand designer and art director. Deliver precise, actionable "
@@ -71,6 +113,13 @@ BRAND_GUIDELINES_SCHEMA: Dict[str, Any] = {
                     },
                     "tagline": {"type": "string", "description": "Headline copy or slogan if visible"},
                 },
+                "additionalProperties": False,
+                "required": [
+                    "brand_name",
+                    "design_context",
+                    "core_attributes",
+                    "tagline",
+                ],
             },
             "visual_identity": {
                 "type": "object",
@@ -86,7 +135,8 @@ BRAND_GUIDELINES_SCHEMA: Dict[str, Any] = {
                                 "usage": {"type": "string", "description": "Where and how the color appears"},
                                 "notes": {"type": "string"},
                             },
-                            "required": ["hex"],
+                            "additionalProperties": False,
+                            "required": ["name", "hex", "finish", "usage", "notes"],
                         },
                     },
                     "typography": {
@@ -101,7 +151,15 @@ BRAND_GUIDELINES_SCHEMA: Dict[str, Any] = {
                                 "tracking": {"type": "string", "description": "Kerning/letter-spacing observations"},
                                 "notes": {"type": "string"},
                             },
-                            "required": ["family"],
+                            "additionalProperties": False,
+                            "required": [
+                                "family",
+                                "style",
+                                "size_range",
+                                "usage",
+                                "tracking",
+                                "notes",
+                            ],
                         },
                     },
                     "logo_usage": {
@@ -117,9 +175,22 @@ BRAND_GUIDELINES_SCHEMA: Dict[str, Any] = {
                             "iconography": {"type": "array", "items": {"type": "string"}},
                             "textures_and_patterns": {"type": "array", "items": {"type": "string"}},
                         },
+                        "additionalProperties": False,
+                        "required": [
+                            "photography",
+                            "illustration",
+                            "iconography",
+                            "textures_and_patterns",
+                        ],
                     },
                 },
-                "required": ["color_palette", "typography"],
+                "additionalProperties": False,
+                "required": [
+                    "color_palette",
+                    "typography",
+                    "logo_usage",
+                    "imagery_style",
+                ],
             },
             "layout_and_components": {
                 "type": "object",
@@ -129,6 +200,13 @@ BRAND_GUIDELINES_SCHEMA: Dict[str, Any] = {
                     "call_to_action_treatment": {"type": "array", "items": {"type": "string"}},
                     "interaction_notes": {"type": "array", "items": {"type": "string"}},
                 },
+                "additionalProperties": False,
+                "required": [
+                    "grid_and_spacing",
+                    "key_components",
+                    "call_to_action_treatment",
+                    "interaction_notes",
+                ],
             },
             "voice_and_copy": {
                 "type": "object",
@@ -138,6 +216,13 @@ BRAND_GUIDELINES_SCHEMA: Dict[str, Any] = {
                     "dos": {"type": "array", "items": {"type": "string"}},
                     "donts": {"type": "array", "items": {"type": "string"}},
                 },
+                "additionalProperties": False,
+                "required": [
+                    "tone_descriptors",
+                    "messaging_pillars",
+                    "dos",
+                    "donts",
+                ],
             },
             "production_notes": {"type": "array", "items": {"type": "string"}},
             "confidence": {
@@ -145,7 +230,15 @@ BRAND_GUIDELINES_SCHEMA: Dict[str, Any] = {
                 "description": "Statement on confidence or areas needing confirmation",
             },
         },
-        "required": ["visual_identity"],
+        "required": [
+            "brand_identity",
+            "visual_identity",
+            "layout_and_components",
+            "voice_and_copy",
+            "production_notes",
+            "confidence",
+        ],
+        "additionalProperties": False,
     },
 }
 
@@ -223,6 +316,9 @@ def analyze_image(
 
     prompt = USER_PROMPT_TEMPLATE.format(image_name=image_path.name)
 
+    mime_type = _guess_mime_type(image_path)
+    data_url = _encode_image_as_data_url(image_bytes, mime_type)
+
     try:
         response = client.responses.create(
             model=model,
@@ -230,20 +326,31 @@ def analyze_image(
                 {
                     "role": "system",
                     "content": [
-                        {"type": "text", "text": SYSTEM_PROMPT},
+                        {"type": "input_text", "text": SYSTEM_PROMPT},
                     ],
                 },
                 {
                     "role": "user",
                     "content": [
                         {"type": "input_text", "text": prompt},
-                        {"type": "input_image", "image": {"bytes": image_bytes}},
+                        {
+                            "type": "input_image",
+                            "image_url": data_url,
+                            "detail": "auto",
+                        },
                     ],
                 },
             ],
             temperature=temperature,
             max_output_tokens=max_output_tokens,
-            response_format={"type": "json_schema", "json_schema": BRAND_GUIDELINES_SCHEMA},
+            text={
+                "format": {
+                    "type": "json_schema",
+                    "name": BRAND_GUIDELINES_SCHEMA["name"],
+                    "schema": BRAND_GUIDELINES_SCHEMA["schema"],
+                    "strict": True,
+                }
+            },
         )
     except Exception as exc:  # pragma: no cover - depends on network/API availability
         print(f"OpenAI request failed for {image_path}: {exc}", file=sys.stderr)
@@ -619,6 +726,9 @@ def run_analysis(args: argparse.Namespace) -> Dict[str, Any]:
     if not image_paths:
         raise SystemExit("No valid images were found to analyze.")
 
+    if args.env_file:
+        load_env_file(Path(args.env_file).expanduser())
+
     client = build_client(args.api_key)
 
     results: List[Dict[str, Any]] = []
@@ -691,6 +801,11 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         "--fail-fast",
         action="store_true",
         help="Abort execution if any image analysis fails.",
+    )
+    parser.add_argument(
+        "--env-file",
+        default=".env",
+        help="Optional dotenv file to preload environment variables (default: .env).",
     )
     return parser.parse_args(argv)
 
