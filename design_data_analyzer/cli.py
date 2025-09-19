@@ -1,4 +1,4 @@
-"""CLI entrypoint for the brand guidelines extractor."""
+"""CLI entrypoint for the design data analyzer."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from .reporting import render_markdown
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Extract structured brand guidelines from design assets using GPT-4o Vision.",
+        description="Extract structured design data from visual assets using GPT-4o Vision.",
     )
     parser.add_argument("images", nargs="*", help="Specific image files or directories to analyze.")
     parser.add_argument(

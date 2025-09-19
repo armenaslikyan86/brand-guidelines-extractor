@@ -1,9 +1,9 @@
-"""Structured output schema definition for brand guidelines."""
+"""Structured output schema definition for design data."""
 
 from typing import Any, Dict
 
-BRAND_GUIDELINES_SCHEMA: Dict[str, Any] = {
-    "name": "brand_guidelines",
+DESIGN_DATA_SCHEMA: Dict[str, Any] = {
+    "name": "design_data",
     "schema": {
         "type": "object",
         "properties": {
@@ -182,4 +182,4 @@ BRAND_GUIDELINES_SCHEMA: Dict[str, Any] = {
     },
 }
 
-__all__ = ["BRAND_GUIDELINES_SCHEMA"]
+__all__ = ["DESIGN_DATA_SCHEMA"]

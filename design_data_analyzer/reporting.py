@@ -1,4 +1,4 @@
-"""Rendering utilities for brand guideline outputs."""
+"""Rendering utilities for design data outputs."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ def render_markdown(aggregated: Dict[str, Any]) -> str:
     """Generate a polished Markdown report from aggregated guideline data."""
 
     compiled = aggregated.get("compiled", {})
-    lines: List[str] = ["# Brand Guidelines Specification", ""]
+    lines: List[str] = ["# Design Data Specification", ""]
     lines.append(f"- Images analyzed: {aggregated.get('images_analyzed', 0)}")
     lines.append("")
 

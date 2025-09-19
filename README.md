@@ -1,6 +1,6 @@
-# Brand Guidelines Extractor
+# Design Data Analyzer
 
-This proof-of-concept CLI inspects design reference images with OpenAI's GPT-4o Vision and produces a polished brand-guidelines specification that designers can hand off to stakeholders.
+This proof-of-concept CLI inspects design reference images with OpenAI's GPT-4o Vision and produces a polished design data specification that designers can hand off to stakeholders.
 
 ## Prerequisites
 
@@ -14,13 +14,13 @@ This proof-of-concept CLI inspects design reference images with OpenAI's GPT-4o 
 2. Run the analyzer, choosing JSON (default) or Markdown output.
 
 ```bash
-python3 analyze_brand_guidelines.py \
+python3 analyze_design_data.py \
   --input-dir design_assets \
   --format md \
-  --output brand-guidelines.md
+  --output design-data.md
 ```
 
-That command scans every supported image in `design_assets/`, calls GPT-4o Vision, aggregates results across all files, and saves a client-ready Markdown report to `brand-guidelines.md`.
+That command scans every supported image in `design_assets/`, calls GPT-4o Vision, aggregates results across all files, and saves a client-ready Markdown report to `design-data.md`.
 
 If you would rather view structured JSON, omit `--format md` and/or `--output` to print directly to the terminal.
 
@@ -34,13 +34,13 @@ Images with extensions: PNG, JPG, JPEG, GIF, WEBP, BMP, TIF, TIFF. Use `--recurs
 - `--fail-fast`: stop immediately if any image fails to process.
 - `--model`, `--temperature`, `--max-output-tokens`: tune OpenAI model behavior.
 
-See `python3 analyze_brand_guidelines.py --help` for the full flag list.
+See `python3 analyze_design_data.py --help` for the full flag list.
 
 ## Output Overview
 
 Each run produces:
 
-- A consolidated summary of brand identity, visual identity, layout, and copy insights deduplicated across all inputs.
+- A consolidated summary of design identity, visual identity, layout, and copy insights deduplicated across all inputs.
 - Detailed color palette and typography tables with usage notes.
 - Production notes and confidence call-outs so designers know where to verify details.
 - Embedded per-image JSON extracts for auditability.

@@ -1,4 +1,4 @@
-"""Brand guidelines extractor package."""
+"""Design data analyzer package."""
 
 from .cli import main
 

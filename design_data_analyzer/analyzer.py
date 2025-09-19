@@ -1,4 +1,4 @@
-"""Core analysis and aggregation logic for brand guideline extraction."""
+"""Core analysis and aggregation logic for design data extraction."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ except ImportError as exc:  # pragma: no cover - depends on environment
 
 from .io_utils import encode_image_as_data_url, guess_mime_type
 from .prompts import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
-from .schema import BRAND_GUIDELINES_SCHEMA
+from .schema import DESIGN_DATA_SCHEMA
 
 
 def build_client(api_key: Optional[str]) -> OpenAI:
@@ -77,8 +77,8 @@ def analyze_image(
             text={
                 "format": {
                     "type": "json_schema",
-                    "name": BRAND_GUIDELINES_SCHEMA["name"],
-                    "schema": BRAND_GUIDELINES_SCHEMA["schema"],
+                    "name": DESIGN_DATA_SCHEMA["name"],
+                    "schema": DESIGN_DATA_SCHEMA["schema"],
                     "strict": True,
                 }
             },
