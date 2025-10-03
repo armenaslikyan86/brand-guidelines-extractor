@@ -1,48 +1,51 @@
 # Design Data Analyzer
 
-This proof-of-concept CLI inspects design reference images with OpenAI's GPT-4o Vision and produces a polished design data specification that designers can hand off to stakeholders.
+This CLI inspects design reference images and can operate in two modes:
+
+1. **OpenAI mode (default)** — calls GPT-4o vision to extract rich design data and renders Bynder-style guidelines.
+2. **Local mode** — runs deterministic heuristics (color, layout, lightweight OCR) without any network dependency.
 
 ## Prerequisites
 
 - Python 3.9+
-- `pip install openai`
-- An OpenAI API key with access to GPT-4o (set `OPENAI_API_KEY` or pass `--api-key`)
+- Install dependencies via `python3 -m pip install -r requirements.txt` (includes `openai`, `numpy`, `Pillow`, `pytest`).
+- Optional: [`pytesseract`](https://pypi.org/project/pytesseract/) and the Tesseract binary to improve on-device text extraction when using local mode.
 
 ## Quick Start
 
-1. Place one or more reference images inside the provided `design_assets/` directory (or point to any directory/file path you prefer).
-2. Run the analyzer, choosing JSON (default) or Markdown output.
+1. Drop design assets into `design_assets/` or point the CLI at a preferred directory.
+2. Create a `.env` containing `OPENAI_API_KEY=...` (or pass `--api-key`).
+3. Generate the guideline document with OpenAI (default engine):
 
 ```bash
 python3 analyze_design_data.py \
   --input-dir design_assets \
   --format md \
-  --output design-data.md
+  --output generated_guidelines/bynder-guidelines.md
 ```
 
-That command scans every supported image in `design_assets/`, calls GPT-4o Vision, aggregates results across all files, and saves a client-ready Markdown report to `design-data.md`.
-
-If you would rather view structured JSON, omit `--format md` and/or `--output` to print directly to the terminal.
+The command scans supported images, calls OpenAI to extract structured design data, merges local heuristics for layout cues, and renders Markdown styled after the official Bynder brand guidelines. Omit `--output` to print to the terminal. Switch to `--format json` to inspect the raw design spec.
 
 ## Supported Asset Types
 
-Images with extensions: PNG, JPG, JPEG, GIF, WEBP, BMP, TIF, TIFF. Use `--recursive` to crawl nested folders.
+Images with extensions: PNG, JPG, JPEG, GIF, WEBP, BMP, TIF, TIFF. Use `--recursive` to traverse nested folders. Combine explicit paths via positional arguments with `--input-dir` for bespoke batches.
 
-## Additional Options
+## CLI Highlights
 
-- `--images`: provide explicit image paths or directories alongside/outside `--input-dir`.
-- `--fail-fast`: stop immediately if any image fails to process.
-- `--model`, `--temperature`, `--max-output-tokens`: tune OpenAI model behavior.
+- `--engine`: Choose `openai` (default) or `local` for offline heuristics.
+- `--brand-name`: Override the title in the generated document (default: Bynder).
+- `--format`: Select `md` (default) or `json` output.
+- `--recursive`: Scan directories recursively.
+- `--env-file`: Load environment variables (e.g., API keys) from a dotenv file.
 
-See `python3 analyze_design_data.py --help` for the full flag list.
+Run `python3 analyze_design_data.py --help` for the full flag list.
 
-## Output Overview
+## Outputs
 
-Each run produces:
+The analyzer creates:
 
-- A consolidated summary of design identity, visual identity, layout, and copy insights deduplicated across all inputs.
-- Detailed color palette and typography tables with usage notes.
-- Production notes and confidence call-outs so designers know where to verify details.
-- Embedded per-image JSON extracts for auditability.
+- A Markdown guideline set mirroring sections such as Tone of Voice, Social Media, Visual System, Corner Radius, Iconography, Logo, and Color.
+- An aggregated OpenAI design spec (JSON) plus local evidence for downstream automation.
+- Optional JSON output capturing either the full OpenAI spec or the local heuristic evidence.
 
-Use the report as a starting point for handoffs, design reviews, or further documentation.
+Use the resulting document as the baseline for downstream design automation and manual reviews.
